@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Oracle Response</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Oracle Result</h2>
+        <p><strong>You asked:</strong> {{ oracle.question }}</p>
+        {% if oracle.answer %}
+            <p><strong>Answer:</strong> {{ oracle.answer | upper }}</p>
+        {% else %}
+            <p><em>Still waiting for a response...</em></p>
+        {% endif %}
+        <a href="{{ url_for('home') }}" class="btn">Back to Dashboard</a>
+    </div>
+</body>
+</html>

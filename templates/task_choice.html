@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Choose Your Challenge</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .task-option {
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .task-option h3 {
+            margin-top: 0;
+        }
+
+        .btn {
+            margin-top: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Choose Your Challenge</h2>
+
+        {% for task in tasks %}
+        <div class="task-option">
+            <h3>{{ task.name }} (
+            {% if powerup %}
+                <span style="text-decoration: line-through; color: grey;">{{ task.points }}</span>
+                <span style="color: green; font-weight: bold;">{{ task.points * 2 }}</span>
+            {% else %}
+                {{ task.points }}
+            {% endif %} pts)</h3>
+            <p>{{ task.description }}</p>
+            <a href="{{ url_for('choose_task', task_id=task.id) }}" class="btn">Choose This</a>
+        </div>
+        {% endfor %}
+        <a href="{{ url_for('home') }}" class="btn">Back to Dashboard</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>The Oracle Has Spoken</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>The Oracle Question</h2>
+        <p><strong>{{ oracle.sender }}</strong> asks:</p>
+        <p style="font-size: 1.5em;">“{{ oracle.question }}”</p>
+        <form method="POST" action="{{ url_for('oracle_answer', oracle_id=oracle.id) }}">
+            <button name="answer" value="yes" class="btn">Yes</button>
+            <button name="answer" value="no" class="btn danger">No</button>
+        </form>
+    </div>
+</body>
+</html>

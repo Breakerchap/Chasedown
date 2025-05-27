@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Location</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Compass CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-compass/dist/leaflet-compass.css" />
+    <!-- Your style.css -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 60px auto;
+            padding: 20px;
+        }
+
+        #map {
+            height: 80vh;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Your GPS Location</h2>
+        <div id="map">Loading map...</div>
+        <a href="{{ url_for('home') }}" class="btn">Back to Dashboard</a>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Compass Plugin JS -->
+    <script src="https://unpkg.com/leaflet-compass/dist/leaflet-compass.min.js"></script>
+
+    <script>
+        let map, marker;
+
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(function (position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                if (!map) {
+                    map = L.map('map').setView([lat, lon], 16);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(map);
+
+                    marker = L.marker([lat, lon]).addTo(map).bindPopup('You are here.').openPopup();
+                    L.control.compass({
+                        autoActive: true,
+                        showDigit: true,
+                        compassClass: 'leaflet-compass',  // makes sure needle displays
+                        textErr: 'Compass not available',
+                        callErr: function(err) { console.error(err); }
+                    }).addTo(map);
+                } else {
+                    marker.setLatLng([lat, lon]);
+                    map.setView([lat, lon]);
+                }
+            }, function (err) {
+                alert('Unable to retrieve location: ' + err.message);
+            });
+        } else {
+            alert('Geolocation not supported by this browser.');
+        }
+    </script>
+</body>
+</html>

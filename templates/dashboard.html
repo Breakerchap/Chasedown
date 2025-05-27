@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Dashboard</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+	<div class="container">
+		<h2>Welcome, {{ user.username }}</h2>
+		<p class="role">Role: {{ user.role.title() }} | Points: {{ user.points }}</p>
+
+		{% if task %}
+			<a href="{{ url_for('task_page') }}" class="btn">Go to Current Task</a>
+		{% else %}
+			<a href="{{ url_for('tasks') }}" class="btn">Choose a Task</a>
+		{% endif %}
+
+		<a href="{{ url_for('map_page') }}" class="btn">View Map</a>
+		<a href="{{ url_for('store') }}" class="btn">Power-Up Store</a>
+
+		{% if user.role == 'hunter' %}
+			<form method="POST" action="{{ url_for('tip') }}" class="form">
+				<input name="target" placeholder="Enter username to tip" required>
+				<input type="submit" value="Tip Player" class="btn danger">
+			</form>
+		{% endif %}
+	</div>
+
+	{% if bike_expiry_time is defined and bike_expiry_time %}
+		<div id="bike-timer" style="position: fixed; bottom: 10px; right: 10px; background: #007BFF; color: white; padding: 10px 15px; border-radius: 8px; font-size: 16px;">
+			Bike Time Remaining: <span id="bike-time">calculating...</span>
+		</div>
+
+		<script>
+			const expiry = new Date("{{ bike_expiry_time }}");
+			const timerElement = document.getElementById("bike-time");
+
+			function updateBikeTimer() {
+				const now = new Date();
+				const remaining = Math.max(0, Math.floor((expiry - now) / 1000));
+				const min = Math.floor(remaining / 60);
+				const sec = remaining % 60;
+				timerElement.innerText = `${min}m ${sec}s`;
+
+				if (remaining === 0) {
+					clearInterval(timerInterval);
+					timerElement.innerText = "Expired";
+				}
+			}
+
+			const timerInterval = setInterval(updateBikeTimer, 1000);
+			updateBikeTimer();
+		</script>
+	{% endif %}
+</body>
+</html>
