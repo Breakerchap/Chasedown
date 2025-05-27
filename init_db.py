@@ -1,4 +1,13 @@
-from app import db, User, Task, app
+import os
+import sys
+
+# Make sure the instance folder exists
+os.makedirs(os.path.join(os.path.dirname(__file__), 'instance'), exist_ok=True)
+
+# Allow imports from app.py
+sys.path.append(os.path.dirname(__file__))
+
+from app import app, db, User, Task
 
 with app.app_context():
     db.create_all()
@@ -58,4 +67,4 @@ with app.app_context():
             db.session.add(task)
 
     db.session.commit()
-    print("Tasks added to database.")
+    print("Database and tasks setup complete.")
