@@ -5,19 +5,43 @@ from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 import random
 from datetime import datetime, UTC, timedelta
+from dotenv import load_dotenv
+import secrets
 
 # --- Ensure 'instance/' folder exists early ---
 basedir = os.path.abspath(os.path.dirname(__file__))
 instance_dir = os.path.join(basedir, 'instance')
 os.makedirs(instance_dir, exist_ok=True)
 
+# Path to .env
+env_path = ".env"
+
+# If .env doesn't exist, create it with a secure SECRET_KEY
+if not os.path.exists(env_path):
+    secret_key = secrets.token_urlsafe(32)
+    with open(env_path, "w") as f:
+        f.write(f"SECRET_KEY={secret_key}\n")
+    print("[INFO] .env file created with a secure SECRET_KEY.")
+else:
+    print("[INFO] .env file found.")
+
+# Load the .env file
+load_dotenv(env_path)
+
 # --- App setup ---
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY")
 db_path = os.path.join(instance_dir, 'chasedown.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+def has_eye_power(user_id):
+    eye = EyeInTheSky.query.filter_by(user_id=user_id).first()
+    if eye and (datetime.now(UTC) - eye.start_time).total_seconds() <= 300:
+        return True
+    return False
 
 # --- Models ---
 class User(db.Model):
@@ -65,6 +89,17 @@ class BikeState(db.Model):
     in_use = db.Column(db.Boolean, default=False)
     user = db.Column(db.String(80))
     start_time = db.Column(db.DateTime)
+
+class EyeInTheSky(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
+    start_time = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+
+class UserCoordinates(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
+    lat = db.Column(db.Float)
+    lon = db.Column(db.Float)
 
 # --- Routes ---
 @app.route('/')
@@ -228,6 +263,18 @@ def buy_powerup():
                 bike.start_time = datetime.now().replace(tzinfo=UTC)
             db.session.commit()
         return redirect(url_for('store'))
+    elif powerup == 'eye':
+        cost = 80 if user.role == 'runner' else 40
+        if user.points >= cost:
+            user.points -= cost
+            # ensure only one active use
+            existing = EyeInTheSky.query.filter_by(user_id=user.id).first()
+            if existing:
+                db.session.delete(existing)
+            db.session.add(EyeInTheSky(user_id=user.id))
+            db.session.commit()
+            return redirect(url_for('store'))
+
     return redirect(url_for('store'))
 
 @app.route('/store')
@@ -294,7 +341,44 @@ def oracle_result(oracle_id):
 
 @app.route('/map')
 def map_page():
-    return render_template('map.html')
+    user = User.query.get(session['user_id'])
+    show_all = has_eye_power(user.id)
+    coordinates = []
+
+    if show_all:
+        coords = UserCoordinates.query.all()
+        for c in coords:
+            player = User.query.get(c.user_id)
+            if player.username != user.username:
+                coordinates.append({'username': player.username, 'lat': c.lat, 'lon': c.lon})
+
+    return render_template('map.html', show_all=show_all, others=coordinates)
+
+@app.route('/gps_map')
+def gps_map():
+    user = User.query.get(session['user_id'])
+    eye = EyeInTheSky.query.filter_by(user_id=user.id).first()
+    if not eye or (datetime.now(UTC) - eye.start_time).total_seconds() > 300:
+        return redirect(url_for('home'))
+
+    # Get all users + last known coordinates
+    coordinates = UserCoordinates.query.all()
+    return render_template('gps_map.html', coordinates=coordinates)
+
+@app.route('/update_location', methods=['POST'])
+def update_location():
+    user = User.query.get(session['user_id'])
+    lat = request.form['lat']
+    lon = request.form['lon']
+    coord = UserCoordinates.query.filter_by(user_id=user.id).first()
+    if not coord:
+        coord = UserCoordinates(user_id=user.id, lat=lat, lon=lon)
+        db.session.add(coord)
+    else:
+        coord.lat = lat
+        coord.lon = lon
+    db.session.commit()
+    return '', 204
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):

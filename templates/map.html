@@ -6,29 +6,13 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Compass CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-compass/dist/leaflet-compass.css" />
-    <!-- Your style.css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 60px auto;
-            padding: 20px;
-        }
-
-        #map {
-            height: 80vh;
-            width: 100%;
-            margin-top: 20px;
-            border-radius: 8px;
-        }
+        html, body { margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 60px auto; padding: 20px; }
+        #map { height: 80vh; width: 100%; margin-top: 20px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -38,40 +22,61 @@
         <a href="{{ url_for('home') }}" class="btn">Back to Dashboard</a>
     </div>
 
-    <!-- Leaflet JS -->
+    <!-- Server-side data -->
+    <script>
+        const showAll = {{ 'true' if show_all else 'false' }};
+        const others = {{ others | tojson }};
+    </script>
+
+    <!-- Leaflet and Compass -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Compass Plugin JS -->
     <script src="https://unpkg.com/leaflet-compass/dist/leaflet-compass.min.js"></script>
 
+    <!-- Main Map Logic -->
     <script>
         let map, marker;
 
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(function (position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
+        function updateMap(lat, lon) {
+            if (!map) {
+                map = L.map('map').setView([lat, lon], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
 
-                if (!map) {
-                    map = L.map('map').setView([lat, lon], 16);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; OpenStreetMap contributors'
-                    }).addTo(map);
+                marker = L.marker([lat, lon]).addTo(map).bindPopup('You are here.').openPopup();
 
-                    marker = L.marker([lat, lon]).addTo(map).bindPopup('You are here.').openPopup();
-                    L.control.compass({
-                        autoActive: true,
-                        showDigit: true,
-                        compassClass: 'leaflet-compass',  // makes sure needle displays
-                        textErr: 'Compass not available',
-                        callErr: function(err) { console.error(err); }
-                    }).addTo(map);
-                } else {
-                    marker.setLatLng([lat, lon]);
-                    map.setView([lat, lon]);
+                L.control.compass({
+                    autoActive: true,
+                    showDigit: true,
+                    compassClass: 'leaflet-compass',
+                    textErr: 'Compass not available',
+                    callErr: function(err) { console.error(err); }
+                }).addTo(map);
+
+                if (showAll) {
+                    others.forEach(player => {
+                        L.marker([player.lat, player.lon])
+                          .addTo(map)
+                          .bindPopup(player.username);
+                    });
                 }
-            }, function (err) {
-                alert('Unable to retrieve location: ' + err.message);
+            } else {
+                marker.setLatLng([lat, lon]);
+                map.setView([lat, lon]);
+            }
+
+            fetch('/update_location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ lat: lat, lon: lon })
             });
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                pos => updateMap(pos.coords.latitude, pos.coords.longitude),
+                err => alert('Unable to retrieve location: ' + err.message)
+            );
         } else {
             alert('Geolocation not supported by this browser.');
         }
