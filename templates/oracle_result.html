@@ -1,8 +1,8 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Oracle Response</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -14,7 +14,7 @@
         {% else %}
             <p><em>Still waiting for a response...</em></p>
         {% endif %}
-        <a href="{{ url_for('home') }}" class="btn">Back to Dashboard</a>
+        <a href="{{ url_for('home') }}" class="btn full-width">Back to Dashboard</a>
     </div>
 </body>
 </html>

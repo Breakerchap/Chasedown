@@ -1,8 +1,8 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         table {
@@ -18,6 +18,11 @@
 
         form {
             margin-bottom: 5px;
+        }
+
+        .btn {
+            width: 100%;
+            margin-top: 6px;
         }
 
         @media screen and (max-width: 768px) {
@@ -55,13 +60,13 @@
                 <td>{{ user.password }}</td>
                 <td>
                     <form method="POST" action="{{ url_for('change_points', user_id=user.id) }}">
-                        <input type="number" name="points" value="{{ user.points }}" style="width: 70px;">
+                        <input type="number" name="points" value="{{ user.points }}" style="width: 100%;">
                         <button type="submit" class="btn">Update</button>
                     </form>
                 </td>
                 <td>
                     <form method="POST" action="{{ url_for('change_role', user_id=user.id) }}">
-                        <select name="role">
+                        <select name="role" style="width: 100%;">
                             <option value="runner" {% if user.role == 'runner' %}selected{% endif %}>Runner</option>
                             <option value="hunter" {% if user.role == 'hunter' %}selected{% endif %}>Hunter</option>
                             <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>

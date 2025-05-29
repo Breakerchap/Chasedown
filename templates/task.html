@@ -1,8 +1,8 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Your Task</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
         let startTime = new Date("{{ start_time }}Z").getTime();
@@ -44,26 +44,23 @@
             <form method="POST" action="{{ url_for('submit') }}" enctype="multipart/form-data">
                 <label>Upload video proof:</label>
                 <input type="file" name="video" required>
-                <input type="submit" value="Submit Challenge" class="btn">
+                <input type="submit" value="Submit Challenge" class="btn full-width">
             </form>
 
             <form method="POST" action="{{ url_for('fail') }}" style="margin-top: 10px;">
                 {% if powerup %}
-                    <button type="submit" class="btn danger" style="width: 100%; text-align: center;">
+                    <button type="submit" class="btn danger full-width">
                         Fail Challenge (
                         <span style="text-decoration: line-through;">-{{ task.points // 2 }}</span>
-                        →
-                        <span style="font-weight: bold;">- {{ task.points * 2 }}</span>
-                        pts)
+                        → <span style="font-weight: bold;">- {{ task.points * 2 }}</span> pts)
                     </button>
                 {% else %}
-                    <input type="submit" value="Fail Challenge (-{{ task.points // 2 }} pts)" class="btn danger">
+                    <input type="submit" value="Fail Challenge (-{{ task.points // 2 }} pts)" class="btn danger full-width">
                 {% endif %}
             </form>
-
         </div>
 
-        <a href="{{ url_for('home') }}" class="btn" style="margin-top: 20px;">Back to Dashboard</a>
+        <a href="{{ url_for('home') }}" class="btn full-width" style="margin-top: 20px;">Back to Dashboard</a>
     </div>
 </body>
 </html>

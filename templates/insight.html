@@ -2,7 +2,38 @@
 <html>
 <head>
     <title>Insight</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        @media screen and (max-width: 480px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            tr {
+                margin-bottom: 1rem;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 10px;
+            }
+            th {
+                font-weight: bold;
+            }
+            td {
+                margin-bottom: 8px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -29,7 +60,7 @@
             </tr>
             {% endfor %}
         </table>
-        <a href="{{ url_for('home') }}" class="btn" style="margin-top: 20px;">Back to Dashboard</a>
+        <a href="{{ url_for('home') }}" class="btn full-width">Back to Dashboard</a>
     </div>
 </body>
 </html>

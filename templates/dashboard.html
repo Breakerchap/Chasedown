@@ -2,6 +2,7 @@
 <html>
 <head>
 	<title>Dashboard</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -10,18 +11,18 @@
 		<p class="role">Role: {{ user.role.title() }} | Points: {{ user.points }}</p>
 
 		{% if task %}
-			<a href="{{ url_for('task_page') }}" class="btn">Go to Current Task</a>
+			<a href="{{ url_for('task_page') }}" class="btn full-width">Go to Current Task</a>
 		{% else %}
-			<a href="{{ url_for('tasks') }}" class="btn">Choose a Task</a>
+			<a href="{{ url_for('tasks') }}" class="btn full-width">Choose a Task</a>
 		{% endif %}
 
-		<a href="{{ url_for('map_page') }}" class="btn">View Map</a>
-		<a href="{{ url_for('store') }}" class="btn">Power-Up Store</a>
+		<a href="{{ url_for('map_page') }}" class="btn full-width">View Map</a>
+		<a href="{{ url_for('store') }}" class="btn full-width">Power-Up Store</a>
 
 		{% if user.role == 'hunter' %}
 			<form method="POST" action="{{ url_for('tip') }}" class="form">
 				<input name="target" placeholder="Enter username to tip" required>
-				<input type="submit" value="Tip Player" class="btn danger">
+				<input type="submit" value="Tip Player" class="btn danger full-width">
 			</form>
 		{% endif %}
 	</div>
