@@ -34,7 +34,16 @@
 
     <!-- Main Map Logic -->
     <script>
-        let map, marker;
+        let map, userMarker;
+
+        function getCircleMarker(lat, lon, color, username) {
+            return L.circleMarker([lat, lon], {
+                radius: 8,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.8
+            }).bindPopup(username);
+        }
 
         function updateMap(lat, lon) {
             if (!map) {
@@ -43,7 +52,8 @@
                     attribution: '&copy; OpenStreetMap contributors'
                 }).addTo(map);
 
-                marker = L.marker([lat, lon]).addTo(map).bindPopup('You are here.').openPopup();
+                // You are blue
+                userMarker = getCircleMarker(lat, lon, 'blue', 'You').addTo(map).openPopup();
 
                 L.control.compass({
                     autoActive: true,
@@ -55,13 +65,16 @@
 
                 if (showAll) {
                     others.forEach(player => {
-                        L.marker([player.lat, player.lon])
-                          .addTo(map)
-                          .bindPopup(player.username);
+                        const color = player.role === 'hunter' ? 'red' : 'green';
+                        L.circleMarker([player.lat, player.lon], {
+                            radius: 8,
+                            color: color,
+                            fillOpacity: 0.8
+                        }).addTo(map).bindPopup(player.username);
                     });
                 }
             } else {
-                marker.setLatLng([lat, lon]);
+                userMarker.setLatLng([lat, lon]);
                 map.setView([lat, lon]);
             }
 

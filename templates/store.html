@@ -10,10 +10,10 @@
         <h2>Power-Up Store</h2>
         <p>You have <b>{{ user.points }}</b> points.</p>
 
+        <!-- Up the Ante -->
         <div class="powerup" style="margin-top: 30px;">
             <h3>Up the Ante (30 pts)</h3>
             <p>Doubles the reward for your next challenge, but quadruples the penalty for failing. Can only be used when no task is active.</p>
-
             {% if has_ante %}
                 <p style="color: gray;">You already have Up the Ante active.</p>
             {% elif active_task %}
@@ -28,6 +28,7 @@
             {% endif %}
         </div>
 
+        <!-- Insight -->
         <div class="powerup" style="margin-top: 30px;">
             <h3>Insight (10 pts)</h3>
             <p>See the current points, role and power-ups of every player.</p>
@@ -41,6 +42,7 @@
             {% endif %}
         </div>
 
+        <!-- Oracle -->
         <div class="powerup" style="margin-top: 30px;">
             <h3>The Oracle ({{ 40 if user.role == 'runner' else 30 }} pts)</h3>
             <p>Send a yes/no question to another player. They must answer before continuing. You receive their answer.</p>
@@ -54,11 +56,11 @@
             {% endif %}
         </div>
 
+        <!-- Bike -->
         <div class="powerup" style="margin-top: 30px;">
             {% set bike_cost = 40 if user.role == 'runner' else 70 %}
             <h3>Tour de Sydney ({{ bike_cost }} pts)</h3>
             <p>Rent a bike for 15 minutes. Only one player can rent it at a time.</p>
-
             {% if bike_state and bike_state.in_use %}
                 {% if bike_state.user == user.username %}
                     <form method="POST" action="{{ url_for('return_bike') }}">
@@ -77,6 +79,24 @@
             {% endif %}
         </div>
 
+        <!-- Eye in the Sky -->
+        <div class="powerup" style="margin-top: 30px;">
+            {% set eye_cost = 80 if user.role == 'runner' else 40 %}
+            <h3>Eye in the Sky ({{ eye_cost }} pts)</h3>
+            <p>Track the live GPS location of all players for 5 minutes.</p>
+            {% if has_eye %}
+                <p style="color: gray;">Power-up already active.</p>
+            {% elif user.points >= eye_cost %}
+                <form method="POST" action="{{ url_for('buy_powerup') }}">
+                    <input type="hidden" name="powerup" value="eye">
+                    <button class="btn full-width">Buy</button>
+                </form>
+            {% else %}
+                <p style="color:gray;">Not enough points.</p>
+            {% endif %}
+        </div>
+
+        <!-- Back -->
         <a href="{{ url_for('home') }}" class="btn full-width" style="margin-top: 40px;">Back to Dashboard</a>
     </div>
 </body>

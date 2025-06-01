@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 import random
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, UTC, timedelta, timezone
 from dotenv import load_dotenv
 import secrets
 
@@ -39,8 +39,14 @@ db = SQLAlchemy(app)
 
 def has_eye_power(user_id):
     eye = EyeInTheSky.query.filter_by(user_id=user_id).first()
-    if eye and (datetime.now(UTC) - eye.start_time).total_seconds() <= 300:
-        return True
+    if eye:
+        eye_time = eye.start_time.replace(tzinfo=timezone.utc) if eye.start_time.tzinfo is None else eye.start_time
+        elapsed = (datetime.now(timezone.utc) - eye_time).total_seconds()
+        if elapsed <= 300:
+            return True
+        else:
+            db.session.delete(eye)
+            db.session.commit()
     return False
 
 # --- Models ---
@@ -93,7 +99,7 @@ class BikeState(db.Model):
 class EyeInTheSky(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
-    start_time = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    start_time = db.Column(db.DateTime, default=lambda: datetime.now())
 
 class UserCoordinates(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -110,27 +116,51 @@ def start():
 def home():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+
     user = User.query.get(session['user_id'])
+
     pending_oracle = OracleRequest.query.filter_by(recipient=user.username, resolved=False).first()
     if pending_oracle:
         return redirect(url_for('oracle_receive'))
+
     if user.role == 'admin':
         users = User.query.all()
         videos = TaskInstance.query.filter(TaskInstance.completed == True).all()
         return render_template('admin.html', users=users, videos=videos)
+
+    # --- Bike Timer ---
     bike_state = BikeState.query.first()
-    bike_time_remaining = None
     bike_expiry_time = None
     if bike_state and bike_state.in_use and bike_state.user == user.username:
-        elapsed = (datetime.now() - bike_state.start_time).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - bike_state.start_time.replace(tzinfo=timezone.utc)).total_seconds()
         if elapsed < 15 * 60:
-            bike_expiry_time = (bike_state.start_time + timedelta(minutes=15)).isoformat()
+            bike_expiry_time = (bike_state.start_time.replace(tzinfo=timezone.utc) + timedelta(minutes=15)).isoformat()
         else:
             bike_state.in_use = False
             bike_state.user = None
             db.session.commit()
+
+    # --- Eye Timer ---
+    eye_expiry_time = None
+    eye = EyeInTheSky.query.filter_by(user_id=user.id).first()
+    if eye:
+        eye_time = eye.start_time.replace(tzinfo=timezone.utc) if eye.start_time.tzinfo is None else eye.start_time
+        elapsed = (datetime.now(timezone.utc) - eye_time).total_seconds()
+        if elapsed < 300:
+            eye_expiry_time = (eye_time + timedelta(seconds=300)).isoformat()
+        else:
+            db.session.delete(eye)
+            db.session.commit()
+
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
-    return render_template('dashboard.html', user=user, task=task_instance, bike_time_remaining=bike_time_remaining, bike_expiry_time=bike_expiry_time)
+
+    return render_template(
+        'dashboard.html',
+        user=user,
+        task=task_instance,
+        bike_expiry_time=bike_expiry_time,
+        eye_expiry_time=eye_expiry_time
+    )
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -267,11 +297,10 @@ def buy_powerup():
         cost = 80 if user.role == 'runner' else 40
         if user.points >= cost:
             user.points -= cost
-            # ensure only one active use
             existing = EyeInTheSky.query.filter_by(user_id=user.id).first()
             if existing:
                 db.session.delete(existing)
-            db.session.add(EyeInTheSky(user_id=user.id))
+            db.session.add(EyeInTheSky(user_id=user.id, start_time=datetime.now(timezone.utc)))
             db.session.commit()
             return redirect(url_for('store'))
 
@@ -279,11 +308,32 @@ def buy_powerup():
 
 @app.route('/store')
 def store():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
     user = User.query.get(session['user_id'])
     active_task = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
     bike_state = BikeState.query.first()
-    has_ante = ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first() is not None
-    return render_template('store.html', user=user, active_task=active_task, bike_state=bike_state, has_ante=has_ante)
+    has_ante = ActivePowerup.query.filter_by(user_id=user.id, name="up_the_ante").first() is not None
+
+    # Determine if Eye in the Sky is still active
+    eye = EyeInTheSky.query.filter_by(user_id=user.id).first()
+    has_eye = False
+    if eye:
+        elapsed = (datetime.utcnow() - eye.start_time.replace(tzinfo=None)).total_seconds()
+        if elapsed <= 300:
+            has_eye = True
+        else:
+            db.session.delete(eye)
+            db.session.commit()
+
+    return render_template('store.html',
+        user=user,
+        active_task=active_task,
+        bike_state=bike_state,
+        has_ante=has_ante,
+        has_eye=has_eye  # pass only this
+    )
 
 @app.route('/return_bike', methods=['POST'])
 def return_bike():
@@ -349,8 +399,13 @@ def map_page():
         coords = UserCoordinates.query.all()
         for c in coords:
             player = User.query.get(c.user_id)
-            if player.username != user.username:
-                coordinates.append({'username': player.username, 'lat': c.lat, 'lon': c.lon})
+            if player and player.username != user.username:
+                coordinates.append({
+                    'username': player.username,
+                    'lat': c.lat,
+                    'lon': c.lon,
+                    'role': player.role
+                })
 
     return render_template('map.html', show_all=show_all, others=coordinates)
 

@@ -31,27 +31,35 @@
 		<div id="bike-timer" style="position: fixed; bottom: 10px; right: 10px; background: #007BFF; color: white; padding: 10px 15px; border-radius: 8px; font-size: 16px;">
 			Bike Time Remaining: <span id="bike-time">calculating...</span>
 		</div>
+	{% endif %}
+
+		{% if eye_expiry_time %}
+		<div id="eye-timer" style="position: fixed; bottom: 60px; right: 10px; background: green; color: white; padding: 10px 15px; border-radius: 8px; font-size: 16px;">
+			Eye Time Remaining: <span id="eye-time">calculating...</span>
+		</div>
 
 		<script>
-			const expiry = new Date("{{ bike_expiry_time }}");
-			const timerElement = document.getElementById("bike-time");
+			const eyeExpiry = new Date("{{ eye_expiry_time }}");
+			const eyeTimerElement = document.getElementById("eye-time");
 
-			function updateBikeTimer() {
+			function updateEyeTimer() {
 				const now = new Date();
-				const remaining = Math.max(0, Math.floor((expiry - now) / 1000));
+				const remaining = Math.max(0, Math.floor((eyeExpiry - now) / 1000));
 				const min = Math.floor(remaining / 60);
 				const sec = remaining % 60;
-				timerElement.innerText = `${min}m ${sec}s`;
+				eyeTimerElement.innerText = `${min}m ${sec}s`;
 
 				if (remaining === 0) {
-					clearInterval(timerInterval);
-					timerElement.innerText = "Expired";
+					clearInterval(eyeInterval);
+					eyeTimerElement.innerText = "Expired";
+					document.getElementById("eye-timer").style.display = "none";
 				}
 			}
 
-			const timerInterval = setInterval(updateBikeTimer, 1000);
-			updateBikeTimer();
+			const eyeInterval = setInterval(updateEyeTimer, 1000);
+			updateEyeTimer();
 		</script>
-	{% endif %}
+		{% endif %}
+	
 </body>
 </html>
