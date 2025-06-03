@@ -63,6 +63,7 @@ class Task(db.Model):
     name = db.Column(db.String(120))
     description = db.Column(db.Text)
     points = db.Column(db.Integer)
+    time_limit = db.Column(db.Integer, default=1200)
 
 class TaskInstance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
