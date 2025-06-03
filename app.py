@@ -216,7 +216,17 @@ def task_page():
         return redirect(url_for('home'))
     task = Task.query.get(task_instance.task_id)
     has_ante = ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first() is not None
-    return render_template('task.html', task=task, powerup=has_ante)
+
+    start_time = task_instance.timestamp.replace(tzinfo=timezone.utc).isoformat()
+    time_limit = task.time_limit
+
+    return render_template(
+        'task.html',
+        task=task,
+        powerup=has_ante,
+        start_time=start_time,
+        time_limit=time_limit
+    )
 
 @app.route('/submit', methods=['POST'])
 def submit():

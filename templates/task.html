@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
-        let startTime = new Date("{{ start_time }}Z").getTime();
-        let timeLimit = { time_limit };
+        let startTime = new Date("{{ start_time }}").getTime();
+        let timeLimit = {{ time_limit|int }};
         let interval = setInterval(() => {
             let now = new Date().getTime();
             let elapsed = Math.floor((now - startTime) / 1000);
@@ -16,7 +16,11 @@
                 document.getElementById("countdown").innerText = "Time's up!";
                 document.getElementById("status").innerText = "This task has expired.";
                 document.getElementById("form-section").style.display = "none";
-                fetch('/check_time').then(() => window.location.href = '/dashboard');
+
+                // Automatically fail the task
+                fetch("/fail", { method: "POST" }).then(() => {
+                    window.location.href = "/dashboard";
+                });
             } else {
                 let min = Math.floor(remaining / 60);
                 let sec = remaining % 60;
