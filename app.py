@@ -7,7 +7,11 @@ import random
 from datetime import datetime, UTC, timedelta, timezone
 from dotenv import load_dotenv
 import secrets
-import init
+
+def run_init_script():
+    """Import init.py only AFTER app & db exist."""
+    import init           # local import avoids circular loop
+    init.run()            # call its seeding function
 
 # --- Ensure 'instance/' folder exists early ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -450,4 +454,5 @@ if __name__ == '__main__':
 
     with app.app_context():
         db.create_all()
+        run_init_script()
     app.run(debug=True, host='0.0.0.0')

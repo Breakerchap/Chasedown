@@ -1,34 +1,25 @@
 import os
 import sys
 
-# Make sure the instance folder exists
-os.makedirs(os.path.join(os.path.dirname(__file__), 'instance'), exist_ok=True)
+# ensure folders exist
+base = os.path.dirname(__file__)
+os.makedirs(os.path.join(base, "instance", "uploads"), exist_ok=True)
 
-# Make sure the uploads folder exists
-os.makedirs(os.path.join(os.path.dirname(__file__), 'instance', 'uploads'), exist_ok=True)
+def run():
+    """Seed database; called from app.py after app/db are ready."""
+    # local import avoids circularity
+    from app import db, User, Task
 
-# Allow imports from app.py
-sys.path.append(os.path.dirname(__file__))
+    with db.session.no_autoflush:  # safe bulk ops
+        # create admin
+        if not User.query.filter_by(username="admin").first():
+            db.session.add(User(username="admin",
+                                password="lavender*123",
+                                role="admin", points=0))
 
-from app import app, db, User, Task
-
-with app.app_context():
-    db.create_all()
-
-    # Admin setup
-    if not User.query.filter_by(username='admin').first():
-        admin = User(username='admin', password='lavender*123', role='admin', points=0)
-        db.session.add(admin)
-        print("Admin user created.")
-    else:
-        print("Admin user already exists.")
-
-    # Clear existing tasks
-    Task.query.delete()
-    db.session.commit()
-
-    # Insert fresh tasks
-    tasks_to_add = [
+        # replace tasks
+        Task.query.delete()
+        db.session.bulk_save_objects(tasks_to_add = [
         Task(name='Hunt the Hunters', description='Video the Hunters for 30s without them noticing. They must always be on video and clearly visible.', points=40, time_limit=1200),
         Task(name='Out in the Open', description='Stand out in an open area for 2 mins with no blockages within 15m and only sparse bushland within 30m.', points=30, time_limit=1200),
         Task(name='Bush Survival 101', description='Build a bush shelter from scratch. Post picture on group chat. 30 min limit.', points=40, time_limit=1800),
@@ -57,8 +48,7 @@ with app.app_context():
         Task(name='Meet the Parents', description='You must find and stay with Remy’s parents for at least 1 min. (They get lonely)', points=20, time_limit=1200),
         Task(name='MimeZone', description='You may not speak or make any verbal noises for 5mins', points=20, time_limit=600),
         Task(name='Feng Shui Master', description='Balance 5 stones atop one another. They must stand for atleast 10s', points=20, time_limit=600),
-    ]
+    ])
 
-    db.session.bulk_save_objects(tasks_to_add)
     db.session.commit()
-    print("Tasks replaced and setup complete.")
+    print("[init] Admin & tasks set up.")
