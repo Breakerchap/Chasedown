@@ -34,6 +34,7 @@ app.secret_key = os.getenv("SECRET_KEY")
 db_path = os.path.join(instance_dir, 'chasedown.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join(instance_dir, 'uploads')
 
 db = SQLAlchemy(app)
 
@@ -91,12 +92,6 @@ class OracleRequest(db.Model):
     resolved = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
-class BikeState(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    in_use = db.Column(db.Boolean, default=False)
-    user = db.Column(db.String(80))
-    start_time = db.Column(db.DateTime)
-
 class EyeInTheSky(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
@@ -129,18 +124,6 @@ def home():
         videos = TaskInstance.query.filter(TaskInstance.completed == True).all()
         return render_template('admin.html', users=users, videos=videos)
 
-    # --- Bike Timer ---
-    bike_state = BikeState.query.first()
-    bike_expiry_time = None
-    if bike_state and bike_state.in_use and bike_state.user == user.username:
-        elapsed = (datetime.now(timezone.utc) - bike_state.start_time.replace(tzinfo=timezone.utc)).total_seconds()
-        if elapsed < 15 * 60:
-            bike_expiry_time = (bike_state.start_time.replace(tzinfo=timezone.utc) + timedelta(minutes=15)).isoformat()
-        else:
-            bike_state.in_use = False
-            bike_state.user = None
-            db.session.commit()
-
     # --- Eye Timer ---
     eye_expiry_time = None
     eye = EyeInTheSky.query.filter_by(user_id=user.id).first()
@@ -159,7 +142,6 @@ def home():
         'dashboard.html',
         user=user,
         task=task_instance,
-        bike_expiry_time=bike_expiry_time,
         eye_expiry_time=eye_expiry_time
     )
 
@@ -210,6 +192,7 @@ def choose_task(task_id):
 
 @app.route('/task')
 def task_page():
+    
     user = User.query.get(session['user_id'])
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
     if not task_instance:
@@ -272,40 +255,24 @@ def buy_powerup():
     if powerup == 'up_the_ante':
         if active_task or ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first():
             return "You already have an active challenge or power-up."
-        if user.points >= 30:
-            user.points -= 30
+        if user.points >= 20:
+            user.points -= 20
             db.session.add(ActivePowerup(user_id=user.id, name='up_the_ante'))
             db.session.commit()
         return redirect(url_for('store'))
     elif powerup == 'insight':
-        if user.points >= 10:
-            user.points -= 10
+        if user.points >= 1:
+            user.points -= 1
             db.session.commit()
             return redirect(url_for('insight_page'))
     elif powerup == 'oracle':
-        cost = 30 if user.role == 'runner' else 20
+        cost = 5 if user.role == 'runner' else 3
         if user.points >= cost:
             user.points -= cost
             db.session.commit()
             return redirect(url_for('oracle_send'))
-    elif powerup == 'bike':
-        cost = 40 if user.role == 'runner' else 70
-        if user.points >= cost:
-            bike = BikeState.query.first()
-            if bike and bike.in_use:
-                return "Bikes are already in use."
-            user.points -= cost
-            if not bike:
-                bike = BikeState(in_use=True, user=user.username, start_time=datetime.now().replace(tzinfo=UTC))
-                db.session.add(bike)
-            else:
-                bike.in_use = True
-                bike.user = user.username
-                bike.start_time = datetime.now().replace(tzinfo=UTC)
-            db.session.commit()
-        return redirect(url_for('store'))
     elif powerup == 'eye':
-        cost = 80 if user.role == 'runner' else 40
+        cost = 20 if user.role == 'runner' else 15
         if user.points >= cost:
             user.points -= cost
             existing = EyeInTheSky.query.filter_by(user_id=user.id).first()
@@ -324,7 +291,6 @@ def store():
 
     user = User.query.get(session['user_id'])
     active_task = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
-    bike_state = BikeState.query.first()
     has_ante = ActivePowerup.query.filter_by(user_id=user.id, name="up_the_ante").first() is not None
 
     # Determine if Eye in the Sky is still active
@@ -341,20 +307,9 @@ def store():
     return render_template('store.html',
         user=user,
         active_task=active_task,
-        bike_state=bike_state,
         has_ante=has_ante,
         has_eye=has_eye  # pass only this
     )
-
-@app.route('/return_bike', methods=['POST'])
-def return_bike():
-    user = User.query.get(session['user_id'])
-    bike = BikeState.query.first()
-    if bike and bike.in_use and bike.user == user.username:
-        bike.in_use = False
-        bike.user = None
-        db.session.commit()
-    return redirect(url_for('store'))
 
 @app.route('/insight')
 def insight_page():

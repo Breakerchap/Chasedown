@@ -27,12 +27,6 @@
 		{% endif %}
 	</div>
 
-	{% if bike_expiry_time is defined and bike_expiry_time %}
-		<div id="bike-timer" style="position: fixed; bottom: 10px; right: 10px; background: #007BFF; color: white; padding: 10px 15px; border-radius: 8px; font-size: 16px;">
-			Bike Time Remaining: <span id="bike-time">calculating...</span>
-		</div>
-	{% endif %}
-
 		{% if eye_expiry_time %}
 		<div id="eye-timer" style="position: fixed; bottom: 60px; right: 10px; background: green; color: white; padding: 10px 15px; border-radius: 8px; font-size: 16px;">
 			Eye Time Remaining: <span id="eye-time">calculating...</span>
