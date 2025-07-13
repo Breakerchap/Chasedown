@@ -7,6 +7,7 @@ import random
 from datetime import datetime, UTC, timedelta, timezone
 from dotenv import load_dotenv
 import secrets
+import init
 
 # --- Ensure 'instance/' folder exists early ---
 basedir = os.path.abspath(os.path.dirname(__file__))
