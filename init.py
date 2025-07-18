@@ -10,6 +10,7 @@ os.makedirs(os.path.join(base, "instance", "uploads"), exist_ok=True)
 def run():
     """Seed database; called from app.py or manually."""
     with app.app_context():  # <<<<<< CRITICAL
+        db.create_all()
         with db.session.no_autoflush:  # safe bulk ops
             # create admin
             if not User.query.filter_by(username="admin").first():
