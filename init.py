@@ -20,7 +20,7 @@ def run():
                 
             # replace tasks
             Task.query.delete()
-            db.session.bulk_save_objects(tasks_to_add=[    
+            db.session.bulk_save_objects([    
                 Task(name='Hunt the Hunters', description='Video the Hunters for 30s without them noticing. They must always be on video and clearly visible.', points=40, time_limit=1200),
                 Task(name='Out in the Open', description='Stand out in an open area for 2 mins with no blockages within 15m and only sparse bushland within 30m.', points=30, time_limit=1200),
                 Task(name='Bush Survival 101', description='Build a bush shelter from scratch. Post picture on group chat. 30 min limit.', points=40, time_limit=1800),
