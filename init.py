@@ -52,3 +52,6 @@ def run():
 
     db.session.commit()
     print("[init] Admin & tasks set up.")
+
+if __name__ == "__main__":
+    run()
