@@ -17,43 +17,19 @@
 		{% endif %}
 
 		<a href="{{ url_for('map_page') }}" class="btn full-width">View Map</a>
-		<a href="{{ url_for('store') }}" class="btn full-width">Power-Up Store</a>
 
 		{% if user.role == 'hunter' %}
 			<form method="POST" action="{{ url_for('tip') }}" class="form">
-				<input name="target" placeholder="Enter username to tip" required>
+				<label for="target_username">Tip a Player:</label>
+				<select name="target_username" id="target_username" required>
+					<option value="" disabled selected>Select a player</option>
+					{% for p in players_to_tip %}
+						<option value="{{ p.username }}">{{ p.username }}</option>
+					{% endfor %}
+				</select>
 				<input type="submit" value="Tip Player" class="btn danger full-width">
 			</form>
 		{% endif %}
 	</div>
-
-		{% if eye_expiry_time %}
-		<div id="eye-timer" style="position: fixed; bottom: 60px; right: 10px; background: green; color: white; padding: 10px 15px; border-radius: 8px; font-size: 16px;">
-			Eye Time Remaining: <span id="eye-time">calculating...</span>
-		</div>
-
-		<script>
-			const eyeExpiry = new Date("{{ eye_expiry_time }}");
-			const eyeTimerElement = document.getElementById("eye-time");
-
-			function updateEyeTimer() {
-				const now = new Date();
-				const remaining = Math.max(0, Math.floor((eyeExpiry - now) / 1000));
-				const min = Math.floor(remaining / 60);
-				const sec = remaining % 60;
-				eyeTimerElement.innerText = `${min}m ${sec}s`;
-
-				if (remaining === 0) {
-					clearInterval(eyeInterval);
-					eyeTimerElement.innerText = "Expired";
-					document.getElementById("eye-timer").style.display = "none";
-				}
-			}
-
-			const eyeInterval = setInterval(updateEyeTimer, 1000);
-			updateEyeTimer();
-		</script>
-		{% endif %}
-	
 </body>
 </html>

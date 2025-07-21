@@ -43,18 +43,6 @@ app.config['UPLOAD_FOLDER'] = os.path.join(instance_dir, 'uploads')
 
 db = SQLAlchemy(app)
 
-def has_eye_power(user_id):
-    eye = EyeInTheSky.query.filter_by(user_id=user_id).first()
-    if eye:
-        eye_time = eye.start_time.replace(tzinfo=timezone.utc) if eye.start_time.tzinfo is None else eye.start_time
-        elapsed = (datetime.now(timezone.utc) - eye_time).total_seconds()
-        if elapsed <= 300:
-            return True
-        else:
-            db.session.delete(eye)
-            db.session.commit()
-    return False
-
 # --- Models ---
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -63,6 +51,7 @@ class User(db.Model):
     role = db.Column(db.String(20), default='runner')
     points = db.Column(db.Integer, default=0)
     active_task_id = db.Column(db.Integer, db.ForeignKey('task.id'))
+    last_point_loss = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -80,27 +69,6 @@ class TaskInstance(db.Model):
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     user = db.relationship('User', backref='task_instances')
     task = db.relationship('Task')
-
-class ActivePowerup(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    name = db.Column(db.String(50))
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
-    user = db.relationship('User', backref='active_powerup')
-
-class OracleRequest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.String(80))
-    recipient = db.Column(db.String(80))
-    question = db.Column(db.Text)
-    answer = db.Column(db.String(10))
-    resolved = db.Column(db.Boolean, default=False)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
-
-class EyeInTheSky(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
-    start_time = db.Column(db.DateTime, default=lambda: datetime.now())
 
 class UserCoordinates(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -120,34 +88,51 @@ def home():
 
     user = User.query.get(session['user_id'])
 
-    pending_oracle = OracleRequest.query.filter_by(recipient=user.username, resolved=False).first()
-    if pending_oracle:
-        return redirect(url_for('oracle_receive'))
+    # Persistent hunter point drain
+    if user.role == 'hunter':
+        now = datetime.now(UTC)
+        last_loss = user.last_point_loss
+
+        # Make sure both datetimes are UTC-aware
+        if last_loss.tzinfo is None:
+            last_loss = last_loss.replace(tzinfo=timezone.utc)
+
+        minutes_passed = int((now - last_loss).total_seconds() // 60)
+        if minutes_passed > 0:
+            user.points = max(0, user.points - 3 * minutes_passed)
+            user.last_point_loss = now
+            db.session.commit()
 
     if user.role == 'admin':
         users = User.query.all()
         videos = TaskInstance.query.filter(TaskInstance.completed == True).all()
         return render_template('admin.html', users=users, videos=videos)
 
-    # --- Eye Timer ---
-    eye_expiry_time = None
-    eye = EyeInTheSky.query.filter_by(user_id=user.id).first()
-    if eye:
-        eye_time = eye.start_time.replace(tzinfo=timezone.utc) if eye.start_time.tzinfo is None else eye.start_time
-        elapsed = (datetime.now(timezone.utc) - eye_time).total_seconds()
-        if elapsed < 300:
-            eye_expiry_time = (eye_time + timedelta(seconds=300)).isoformat()
-        else:
-            db.session.delete(eye)
-            db.session.commit()
+    # Check for dashboard lockout
+    locked_until = session.get(f"locked_until_{user.id}")
+    if locked_until:
+        try:
+            locked_time = datetime.fromisoformat(locked_until)
+            if datetime.now(UTC) < locked_time:
+                remaining = int((locked_time - datetime.now(UTC)).total_seconds())
+                return f"Dashboard locked for {remaining} more seconds", 403
+            else:
+                session.pop(f"locked_until_{user.id}", None)
+        except Exception:
+            session.pop(f"locked_until_{user.id}", None)
 
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
+
+    # Provide players for hunter to tip
+    players_to_tip = []
+    if user.role == 'hunter':
+        players_to_tip = User.query.filter(User.username != 'admin', User.id != user.id).all()
 
     return render_template(
         'dashboard.html',
         user=user,
         task=task_instance,
-        eye_expiry_time=eye_expiry_time
+        players_to_tip=players_to_tip
     )
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -181,8 +166,7 @@ def tasks():
     if len(all_tasks) < 2:
         return "Not enough tasks in the database. Please run init_db.py."
     options = random.sample(all_tasks, 2)
-    has_ante = ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first() is not None
-    return render_template('task_choice.html', tasks=options, powerup=has_ante)
+    return render_template('task_choice.html', tasks=options)
 
 @app.route('/choose_task/<int:task_id>')
 def choose_task(task_id):
@@ -203,7 +187,6 @@ def task_page():
     if not task_instance:
         return redirect(url_for('home'))
     task = Task.query.get(task_instance.task_id)
-    has_ante = ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first() is not None
 
     start_time = task_instance.timestamp.replace(tzinfo=timezone.utc).isoformat()
     time_limit = task.time_limit
@@ -211,7 +194,6 @@ def task_page():
     return render_template(
         'task.html',
         task=task,
-        powerup=has_ante,
         start_time=start_time,
         time_limit=time_limit
     )
@@ -227,12 +209,7 @@ def submit():
     task_instance.video_filename = filename
     task_instance.completed = True
     base_points = Task.query.get(task_instance.task_id).points
-    powerup = ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first()
-    if powerup:
-        user.points += base_points * 2
-        db.session.delete(powerup)
-    else:
-        user.points += base_points
+    user.points += base_points
     db.session.commit()
     return redirect(url_for('home'))
 
@@ -242,150 +219,32 @@ def fail():
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
     if task_instance:
         task = Task.query.get(task_instance.task_id)
-        powerup = ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first()
-        if powerup:
-            user.points -= task.points * 2
-            db.session.delete(powerup)
-        else:
-            user.points -= task.points // 2
+        user.points -= task.points // 2
         db.session.delete(task_instance)
         db.session.commit()
     return redirect(url_for('home'))
 
-@app.route('/buy_powerup', methods=['POST'])
-def buy_powerup():
-    user = User.query.get(session['user_id'])
-    powerup = request.form['powerup']
-    active_task = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
-    if powerup == 'up_the_ante':
-        if active_task or ActivePowerup.query.filter_by(user_id=user.id, name='up_the_ante').first():
-            return "You already have an active challenge or power-up."
-        if user.points >= 20:
-            user.points -= 20
-            db.session.add(ActivePowerup(user_id=user.id, name='up_the_ante'))
-            db.session.commit()
-        return redirect(url_for('store'))
-    elif powerup == 'insight':
-        if user.points >= 1:
-            user.points -= 1
-            db.session.commit()
-            return redirect(url_for('insight_page'))
-    elif powerup == 'oracle':
-        cost = 5 if user.role == 'runner' else 3
-        if user.points >= cost:
-            user.points -= cost
-            db.session.commit()
-            return redirect(url_for('oracle_send'))
-    elif powerup == 'eye':
-        cost = 20 if user.role == 'runner' else 15
-        if user.points >= cost:
-            user.points -= cost
-            existing = EyeInTheSky.query.filter_by(user_id=user.id).first()
-            if existing:
-                db.session.delete(existing)
-            db.session.add(EyeInTheSky(user_id=user.id, start_time=datetime.now(timezone.utc)))
-            db.session.commit()
-            return redirect(url_for('store'))
-
-    return redirect(url_for('store'))
-
-@app.route('/store')
-def store():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    user = User.query.get(session['user_id'])
-    active_task = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
-    has_ante = ActivePowerup.query.filter_by(user_id=user.id, name="up_the_ante").first() is not None
-
-    # Determine if Eye in the Sky is still active
-    eye = EyeInTheSky.query.filter_by(user_id=user.id).first()
-    has_eye = False
-    if eye:
-        elapsed = (datetime.utcnow() - eye.start_time.replace(tzinfo=None)).total_seconds()
-        if elapsed <= 300:
-            has_eye = True
-        else:
-            db.session.delete(eye)
-            db.session.commit()
-
-    return render_template('store.html',
-        user=user,
-        active_task=active_task,
-        has_ante=has_ante,
-        has_eye=has_eye  # pass only this
-    )
-
-@app.route('/insight')
-def insight_page():
-    users = User.query.order_by(User.points.desc()).all()
-    powerups = ActivePowerup.query.all()
-    powerup_map = {p.user_id: p.name for p in powerups}
-    return render_template('insight.html', users=users, user_powerups=powerup_map)
-
-@app.route('/oracle_send', methods=['GET', 'POST'])
-def oracle_send():
-    user = User.query.get(session['user_id'])
-    if request.method == 'POST':
-        recipient = request.form['target']
-        question = request.form['question']
-        existing = OracleRequest.query.filter_by(recipient=recipient, resolved=False).first()
-        if existing:
-            return "Target already has an unanswered Oracle question."
-        request_entry = OracleRequest(sender=user.username, recipient=recipient, question=question)
-        db.session.add(request_entry)
-        db.session.commit()
-        return redirect(url_for('oracle_result', oracle_id=request_entry.id))
-    users = User.query.all()
-    return render_template('oracle_send.html', users=users, user=user)
-
-@app.route('/oracle_receive')
-def oracle_receive():
-    user = User.query.get(session['user_id'])
-    pending = OracleRequest.query.filter_by(recipient=user.username, resolved=False).first()
-    if pending:
-        return render_template('oracle_receive.html', oracle=pending)
-    return redirect(url_for('home'))
-
-@app.route('/oracle_answer/<int:oracle_id>', methods=['POST'])
-def oracle_answer(oracle_id):
-    oracle = OracleRequest.query.get(oracle_id)
-    oracle.answer = request.form['answer']
-    oracle.resolved = True
-    db.session.commit()
-    return redirect(url_for('home'))
-
-@app.route('/oracle_result/<int:oracle_id>')
-def oracle_result(oracle_id):
-    oracle = OracleRequest.query.get(oracle_id)
-    return render_template('oracle_result.html', oracle=oracle)
-
 @app.route('/map')
 def map_page():
     user = User.query.get(session['user_id'])
-    show_all = has_eye_power(user.id)
     coordinates = []
 
-    if show_all:
-        coords = UserCoordinates.query.all()
-        for c in coords:
-            player = User.query.get(c.user_id)
-            if player and player.username != user.username:
-                coordinates.append({
-                    'username': player.username,
-                    'lat': c.lat,
-                    'lon': c.lon,
-                    'role': player.role
-                })
+    coords = UserCoordinates.query.all()
+    for c in coords:
+        player = User.query.get(c.user_id)
+        if player and player.username != user.username:
+            coordinates.append({
+                'username': player.username,
+                'lat': c.lat,
+                'lon': c.lon,
+                'role': player.role
+            })
 
-    return render_template('map.html', show_all=show_all, others=coordinates)
+    return render_template('map.html', others=coordinates)
 
 @app.route('/gps_map')
 def gps_map():
     user = User.query.get(session['user_id'])
-    eye = EyeInTheSky.query.filter_by(user_id=user.id).first()
-    if not eye or (datetime.now(UTC) - eye.start_time).total_seconds() > 300:
-        return redirect(url_for('home'))
 
     # Get all users + last known coordinates
     coordinates = UserCoordinates.query.all()
@@ -444,6 +303,29 @@ def delete_video(instance_id):
             pass
         db.session.delete(instance)
         db.session.commit()
+    return redirect(url_for('home'))
+
+@app.route('/tip', methods=['POST'])
+def tip():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    if user.role != 'hunter':
+        return "Only hunters can tip players.", 403
+
+    target_username = request.form.get('target_username')
+    target = User.query.filter_by(username=target_username).first()
+
+    if not target:
+        return "Target not found", 404
+
+    # Convert the target to a hunter and lock their dashboard
+    target.role = 'hunter'
+    session_key = f"locked_until_{target.id}"
+    session[session_key] = (datetime.now(UTC) + timedelta(minutes=2)).isoformat()
+
+    db.session.commit()
     return redirect(url_for('home'))
 
 if __name__ == '__main__':
