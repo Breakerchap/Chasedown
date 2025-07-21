@@ -159,24 +159,45 @@ def register():
 @app.route('/tasks')
 def tasks():
     user = User.query.get(session['user_id'])
+
+    # If player already has an assigned task, redirect
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
     if task_instance:
         return redirect(url_for('task_page'))
-    all_tasks = Task.query.all()
-    if len(all_tasks) < 2:
-        return "Not enough tasks in the database. Please run init_db.py."
-    options = random.sample(all_tasks, 2)
+
+    # If tasks are already stored in session, reuse them
+    if 'task_choices' in session:
+        task_ids = session['task_choices']
+        options = Task.query.filter(Task.id.in_(task_ids)).all()
+    else:
+        all_tasks = Task.query.all()
+        if len(all_tasks) < 2:
+            return "Not enough tasks in the database. Please run init_db.py."
+        options = random.sample(all_tasks, 2)
+        session['task_choices'] = [t.id for t in options]
+
     return render_template('task_choice.html', tasks=options)
 
 @app.route('/choose_task/<int:task_id>')
 def choose_task(task_id):
     user = User.query.get(session['user_id'])
+
+    # Only allow choosing from the two stored options
+    valid_choices = session.get('task_choices')
+    if not valid_choices or task_id not in valid_choices:
+        return "Invalid task selection.", 400
+
     task = Task.query.get(task_id)
     if not task:
         return "Task not found."
+
     instance = TaskInstance(user_id=user.id, task_id=task.id)
     db.session.add(instance)
     db.session.commit()
+
+    # Clear the choices so they can't reuse them
+    session.pop('task_choices', None)
+
     return redirect(url_for('task_page'))
 
 @app.route('/task')
