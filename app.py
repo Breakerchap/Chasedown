@@ -8,6 +8,7 @@ from datetime import datetime, UTC, timedelta, timezone
 from dotenv import load_dotenv
 import secrets
 import urllib.parse
+import time
 
 def run_init_script():
     """Import init.py only AFTER app & db exist."""
@@ -214,13 +215,21 @@ def task_page():
 
 @app.route('/submit', methods=['POST'])
 def submit():
+    start_time = time.time()
+
     file = request.files['video']
     filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
+
     user = User.query.get(session['user_id'])
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
-    task_instance.video_filename = filename
+
+    if file and (time.time() - start_time <= 6):
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        task_instance.video_filename = filename
+    else:
+        task_instance.video_filename = None  # Or some placeholder text like 'timeout'
+
     task_instance.completed = True
     base_points = Task.query.get(task_instance.task_id).points
     user.points += base_points
