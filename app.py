@@ -100,7 +100,7 @@ def home():
 
         minutes_passed = int((now - last_loss).total_seconds() // 60)
         if minutes_passed > 0:
-            user.points = max(0, user.points - 3 * minutes_passed)
+            user.points = max(0, user.points - 2 * minutes_passed)
             user.last_point_loss = now
             db.session.commit()
 
@@ -162,6 +162,9 @@ def register():
 def tasks():
     user = User.query.get(session['user_id'])
 
+    if user.role == 'hunter':
+        return render_template('hunter_blocked.html', user=user)
+
     # If player already has an assigned task, redirect
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
     if task_instance:
@@ -207,6 +210,9 @@ def task_page():
     
     user = User.query.get(session['user_id'])
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
+    if user.role == 'hunter':
+        return render_template('hunter_blocked.html', user=user)
+
     if not task_instance:
         return redirect(url_for('home'))
     task = Task.query.get(task_instance.task_id)
