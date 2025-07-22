@@ -105,7 +105,12 @@
                 <td>{{ entry.task.name }}</td>
                 <td>{{ entry.task.points }}</td>
                 <td>
+                {% if entry.video_filename %}
                     <a href="{{ url_for('uploaded_file', filename=entry.video_filename) }}" class="btn">Download Video</a>
+                {% else %}
+                    <span style="color: grey;">(No video)</span>
+                {% endif %}
+
                 </td>
                 <td>
                     <form method="POST" action="{{ url_for('delete_video', instance_id=entry.id) }}">
