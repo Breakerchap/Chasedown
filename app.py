@@ -52,6 +52,7 @@ class User(db.Model):
     points = db.Column(db.Integer, default=0)
     active_task_id = db.Column(db.Integer, db.ForeignKey('task.id'))
     last_point_loss = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    locked_until = db.Column(db.DateTime, nullable=True)
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,10 +76,6 @@ class UserCoordinates(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
     lat = db.Column(db.Float)
     lon = db.Column(db.Float)
-
-class GlobalTimer(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    end_time = db.Column(db.DateTime, nullable=True)
 
 # --- Routes ---
 @app.route('/')
@@ -110,22 +107,21 @@ def home():
     if user.role == 'admin':
         users = User.query.all()
         videos = TaskInstance.query.filter(TaskInstance.completed == True).all()
-        timer = GlobalTimer.query.first()
-        return render_template('admin.html', users=users, videos=videos, current_timer=timer.end_time if timer else None)
+        return render_template('admin.html', users=users, videos=videos)
+    
+    # Tipped lockout check
+    if user.role != 'admin' and user.locked_until:
+        locked_time = user.locked_until
+        if locked_time.tzinfo is None:
+            locked_time = locked_time.replace(tzinfo=timezone.utc)
 
-
-    # Global lockout check
-    if user.role != 'admin':
-        timer = GlobalTimer.query.first()
-        if timer and timer.end_time:
-            end_time = timer.end_time
-            if end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=timezone.utc)
-
-            if datetime.now(UTC) > end_time:
-                return render_template('locked.html', user=user)
-
-        return render_template('locked.html', user=user)
+        now = datetime.now(UTC)
+        if now < locked_time:
+            seconds_left = int((locked_time - now).total_seconds())
+            return render_template('tipped_cooldown.html', seconds_left=seconds_left, user=user)
+        else:
+            user.locked_until = None
+            db.session.commit()
 
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
 
@@ -139,7 +135,6 @@ def home():
         user=user,
         task=task_instance,
         players_to_tip=players_to_tip,
-        timer_end=timer.end_time if timer else None
     )
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -349,22 +344,20 @@ def delete_video(instance_id):
         db.session.commit()
     return redirect(url_for('home'))
 
-@app.route('/set_timer', methods=['POST'])
-def set_timer():
+@app.route('/toggle_lock', methods=['POST'])
+def toggle_lock():
     user = User.query.get(session['user_id'])
     if user.role != 'admin':
         return "Access denied", 403
 
-    hours = int(request.form.get('hours', 0))
-    minutes = int(request.form.get('minutes', 0))
-    end_time = datetime.now(UTC) + timedelta(hours=hours, minutes=minutes)
+    action = request.form.get('action')
 
-    timer = GlobalTimer.query.first()
-    if not timer:
-        timer = GlobalTimer(end_time=end_time)
-        db.session.add(timer)
-    else:
-        timer.end_time = end_time
+    if action == 'lock':
+        # Lock all non-admin users indefinitely (use far-future date)
+        future = datetime.now(UTC) + timedelta(days=3650)  # 10 years
+        User.query.filter(User.role != 'admin').update({User.locked_until: future})
+    elif action == 'unlock':
+        User.query.filter(User.role != 'admin').update({User.locked_until: None})
 
     db.session.commit()
     return redirect(url_for('home'))
@@ -381,13 +374,13 @@ def tip():
     target_username = request.form.get('target_username')
     target = User.query.filter_by(username=target_username).first()
 
-    if not target:
-        return "Target not found", 404
+    if not target or target.username == 'admin':
+        return "Invalid target.", 400
 
-    # Convert the target to a hunter and lock their dashboard
+    user.role = 'runner'
     target.role = 'hunter'
-    session_key = f"locked_until_{target.id}"
-    session[session_key] = (datetime.now(UTC) + timedelta(minutes=2)).isoformat()
+
+    target.locked_until = datetime.now(UTC) + timedelta(minutes=2)
 
     db.session.commit()
     return redirect(url_for('home'))

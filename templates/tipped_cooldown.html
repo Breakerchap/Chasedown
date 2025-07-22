@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tipped Cooldown</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        let secondsLeft = {{ seconds_left }};
+        function updateCountdown() {
+            const display = document.getElementById("countdown");
+            if (secondsLeft <= 0) {
+                window.location.href = "{{ url_for('home') }}";
+            } else {
+                let mins = Math.floor(secondsLeft / 60);
+                let secs = secondsLeft % 60;
+                display.textContent = mins + "m " + secs + "s";
+                secondsLeft--;
+                setTimeout(updateCountdown, 1000);
+            }
+        }
+        window.onload = updateCountdown;
+    </script>
+</head>
+<body>
+    <div class="container center">
+        <h2>You’ve Been Tipped!</h2>
+        <p>You cannot use the dashboard while your cooldown is active.</p>
+        <p>Time remaining: <strong id="countdown"></strong></p>
+
+        <hr>
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Role:</strong> {{ user.role.title() }}</p>
+        <p><strong>Points:</strong> {{ user.points }}</p>
+    </div>
+</body>
+</html>

@@ -114,22 +114,13 @@
             {% endfor %}
             </tbody>
         </table>
-        <h3>Set Global Timer</h3>
-            <form method="POST" action="{{ url_for('set_timer') }}" class="form">
-                <label for="hours">Hours:</label>
-                <input type="number" name="hours" id="hours" min="0" value="0" required>
-
-                <label for="minutes">Minutes:</label>
-                <input type="number" name="minutes" id="minutes" min="0" value="0" required>
-
-                <input type="submit" value="Set Timer" class="btn full-width">
-            </form>
-
-            {% if current_timer %}
-                <p class="center"><strong>Timer ends at:</strong> {{ current_timer }}</p>
-            {% endif %}
-            <hr>
         <a href="{{ url_for('map_page') }}" class="btn full-width">View Map</a>
+    <h3>Lock/Unlock All Players</h3>
+        <form method="POST" action="{{ url_for('toggle_lock') }}">
+            <button type="submit" name="action" value="lock" class="btn danger full-width">Lock All Players</button>
+            <button type="submit" name="action" value="unlock" class="btn full-width">Unlock All Players</button>
+        </form>
+        <hr>
     </div>
 </body>
 </html>
