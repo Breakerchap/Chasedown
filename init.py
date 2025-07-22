@@ -5,7 +5,7 @@ from app import db, User, Task
 
 # ensure folders exist
 base = os.path.dirname(__file__)
-os.makedirs(os.path.join(base, "instance", "uploads"), exist_ok=True)
+os.makedirs("/mnt/uploads", exist_ok=True)
 
 def run():
     """Seed database; called from app.py or manually."""
