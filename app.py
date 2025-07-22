@@ -1,12 +1,13 @@
 import os
 import subprocess
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 import random
 from datetime import datetime, UTC, timedelta, timezone
 from dotenv import load_dotenv
 import secrets
+import urllib.parse
 
 def run_init_script():
     """Import init.py only AFTER app & db exist."""
@@ -330,7 +331,29 @@ def update_location():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    # Find the TaskInstance using this filename
+    instance = TaskInstance.query.filter_by(video_filename=filename).first()
+    if not instance:
+        return "Video not found.", 404
+
+    user = User.query.get(instance.user_id)
+    task = Task.query.get(instance.task_id)
+
+    # Extract the extension (e.g., .mp4, .mov, .webm)
+    _, ext = os.path.splitext(filename)
+
+    # Build safe custom filename
+    safe_username = urllib.parse.quote(user.username)
+    safe_task = urllib.parse.quote(task.name.replace(' ', '_'))
+    new_name = f"{safe_username}-{safe_task}-{task.points}{ext}"
+
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    return send_file(
+        filepath,
+        as_attachment=True,
+        download_name=new_name
+    )
 
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
 def delete_user(user_id):
