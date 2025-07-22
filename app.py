@@ -207,7 +207,6 @@ def choose_task(task_id):
 
 @app.route('/task')
 def task_page():
-    
     user = User.query.get(session['user_id'])
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
     if user.role == 'hunter':
@@ -286,6 +285,25 @@ def map_page():
             })
 
     return render_template('map.html', others=coordinates)
+
+@app.route('/leaderboard')
+def leaderboard():
+    users = User.query.filter(User.username != 'admin').order_by(User.points.desc()).all()
+    leaderboard_data = []
+
+    for user in users:
+        # Find an unfinished task instance for this user
+        task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
+        task_name = task_instance.task.name if task_instance and task_instance.task else '—'
+
+        leaderboard_data.append({
+            'username': user.username,
+            'points': user.points,
+            'role': user.role,
+            'task': task_name
+        })
+
+    return render_template('leaderboard.html', leaderboard=leaderboard_data)
 
 @app.route('/gps_map')
 def gps_map():

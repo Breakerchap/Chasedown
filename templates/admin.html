@@ -115,6 +115,7 @@
             </tbody>
         </table>
         <a href="{{ url_for('map_page') }}" class="btn full-width">View Map</a>
+        <a href="{{ url_for('leaderboard') }}" class="btn full-width">View Leaderboard</a>
     <h3>Lock/Unlock All Players</h3>
         <form method="POST" action="{{ url_for('toggle_lock') }}">
             <button type="submit" name="action" value="lock" class="btn danger full-width">Lock All Players</button>

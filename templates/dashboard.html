@@ -17,6 +17,7 @@
 		{% endif %}
 
 		<a href="{{ url_for('map_page') }}" class="btn full-width">View Map</a>
+		<a href="{{ url_for('leaderboard') }}" class="btn full-width">View Leaderboard</a>
 
 		{% if user.role == 'hunter' %}
 			<form method="POST" action="{{ url_for('tip') }}" class="form">
@@ -29,9 +30,6 @@
 				</select>
 				<input type="submit" value="Tip Player" class="btn danger full-width">
 			</form>
-		{% endif %}
-		{% if timer_end %}
-			<p class="center"><strong>Game ends at:</strong> {{ timer_end }}</p>
 		{% endif %}
 	</div>
 </body>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaderboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2 class="center">Leaderboard</h2>
+        <table style="width:100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align:left;">Username</th>
+                    <th style="text-align:left;">Points</th>
+                    <th style="text-align:left;">Role</th>
+                    <th style="text-align:left;">Active Task</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in leaderboard %}
+                <tr>
+                    <td>{{ player.username }}</td>
+                    <td>{{ player.points }}</td>
+                    <td>{{ player.role.title() }}</td>
+                    <td>{{ player.task }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <a href="{{ url_for('home') }}" class="btn full-width">Back to Dashboard</a>
+    </div>
+</body>
+</html>
