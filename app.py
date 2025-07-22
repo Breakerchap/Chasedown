@@ -41,7 +41,7 @@ app.secret_key = os.getenv("SECRET_KEY")
 db_path = os.path.join('/mnt/uploads', 'chasedown.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join('/mnt/uploads', 'uploads')
+app.config['UPLOAD_FOLDER'] = '/mnt/uploads'
 
 db = SQLAlchemy(app)
 
