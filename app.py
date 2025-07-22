@@ -37,10 +37,10 @@ load_dotenv(env_path)
 # --- App setup ---
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
-db_path = os.path.join(instance_dir, 'chasedown.db')
+db_path = os.path.join('/mnt/uploads', 'chasedown.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join(instance_dir, 'uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join('/mnt/uploads', 'uploads')
 
 db = SQLAlchemy(app)
 
@@ -433,11 +433,4 @@ def tip():
 
 if __name__ == '__main__':
     db_path = os.path.join('instance', 'chasedown.db')
-    if not os.path.exists(db_path):
-        print("Database not found. Running init_db.py...")
-        subprocess.run(['python', os.path.join('instance', 'init_db.py')])
-
-    with app.app_context():
-        db.create_all()
-        run_init_script()
     app.run(debug=True, host='0.0.0.0')
