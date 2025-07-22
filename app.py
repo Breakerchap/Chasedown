@@ -248,17 +248,33 @@ def fail():
 @app.route('/map')
 def map_page():
     user = User.query.get(session['user_id'])
+
     coordinates = []
 
     coords = UserCoordinates.query.all()
     for c in coords:
         player = User.query.get(c.user_id)
-        if player and player.username != user.username:
+
+        if not player or player.username == 'admin':
+            continue  # Never show admin
+
+        if user.role in ('hunter', 'admin'):
+            # Show all players except admin
             coordinates.append({
                 'username': player.username,
                 'lat': c.lat,
                 'lon': c.lon,
-                'role': player.role
+                'role': player.role,
+                'is_self': player.id == user.id
+            })
+        elif player.id == user.id:
+            # Runners see only themselves
+            coordinates.append({
+                'username': player.username,
+                'lat': c.lat,
+                'lon': c.lon,
+                'role': player.role,
+                'is_self': True
             })
 
     return render_template('map.html', others=coordinates)

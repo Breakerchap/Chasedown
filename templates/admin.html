@@ -87,13 +87,14 @@
         <h3>Submitted Videos</h3>
         <table>
             <thead>
-                <tr><th>User</th><th>Task</th><th>Video</th><th>Actions</th></tr>
+                <tr><th>User</th><th>Task</th><th>Points</th><th>Video</th><th>Actions</th></tr>
             </thead>
             <tbody>
             {% for entry in videos %}
             <tr>
                 <td>{{ entry.user.username }}</td>
                 <td>{{ entry.task.name }}</td>
+                <td>{{ entry.task.points }}</td>
                 <td><a href="{{ url_for('uploaded_file', filename=entry.video_filename) }}" target="_blank">View</a></td>
                 <td>
                     <form method="POST" action="{{ url_for('delete_video', instance_id=entry.id) }}">
@@ -104,6 +105,7 @@
             {% endfor %}
             </tbody>
         </table>
+        <a href="{{ url_for('map_page') }}" class="btn full-width">View Map</a>
     </div>
 </body>
 </html>
