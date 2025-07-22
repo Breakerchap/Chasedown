@@ -76,6 +76,10 @@ class UserCoordinates(db.Model):
     lat = db.Column(db.Float)
     lon = db.Column(db.Float)
 
+class GlobalTimer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+
 # --- Routes ---
 @app.route('/')
 def start():
@@ -106,20 +110,22 @@ def home():
     if user.role == 'admin':
         users = User.query.all()
         videos = TaskInstance.query.filter(TaskInstance.completed == True).all()
-        return render_template('admin.html', users=users, videos=videos)
+        timer = GlobalTimer.query.first()
+        return render_template('admin.html', users=users, videos=videos, current_timer=timer.end_time if timer else None)
 
-    # Check for dashboard lockout
-    locked_until = session.get(f"locked_until_{user.id}")
-    if locked_until:
-        try:
-            locked_time = datetime.fromisoformat(locked_until)
-            if datetime.now(UTC) < locked_time:
-                remaining = int((locked_time - datetime.now(UTC)).total_seconds())
-                return f"Dashboard locked for {remaining} more seconds", 403
-            else:
-                session.pop(f"locked_until_{user.id}", None)
-        except Exception:
-            session.pop(f"locked_until_{user.id}", None)
+
+    # Global lockout check
+    if user.role != 'admin':
+        timer = GlobalTimer.query.first()
+        if timer and timer.end_time:
+            end_time = timer.end_time
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=timezone.utc)
+
+            if datetime.now(UTC) > end_time:
+                return render_template('locked.html', user=user)
+
+        return render_template('locked.html', user=user)
 
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
 
@@ -132,7 +138,8 @@ def home():
         'dashboard.html',
         user=user,
         task=task_instance,
-        players_to_tip=players_to_tip
+        players_to_tip=players_to_tip,
+        timer_end=timer.end_time if timer else None
     )
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -340,6 +347,26 @@ def delete_video(instance_id):
             pass
         db.session.delete(instance)
         db.session.commit()
+    return redirect(url_for('home'))
+
+@app.route('/set_timer', methods=['POST'])
+def set_timer():
+    user = User.query.get(session['user_id'])
+    if user.role != 'admin':
+        return "Access denied", 403
+
+    hours = int(request.form.get('hours', 0))
+    minutes = int(request.form.get('minutes', 0))
+    end_time = datetime.now(UTC) + timedelta(hours=hours, minutes=minutes)
+
+    timer = GlobalTimer.query.first()
+    if not timer:
+        timer = GlobalTimer(end_time=end_time)
+        db.session.add(timer)
+    else:
+        timer.end_time = end_time
+
+    db.session.commit()
     return redirect(url_for('home'))
 
 @app.route('/tip', methods=['POST'])

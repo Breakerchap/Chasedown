@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Locked</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+	<div class="container">
+		<h2 class="center">Game Over</h2>
+		<p class="center">The global timer has expired. Please wait for admin instructions.</p>
+
+		<hr>
+
+		<h3 class="center">Your Info</h3>
+		<p class="center"><strong>Username:</strong> {{ user.username }}</p>
+		<p class="center"><strong>Role:</strong> {{ user.role.title() }}</p>
+		<p class="center"><strong>Points:</strong> {{ user.points }}</p>
+	</div>
+</body>
+</html>

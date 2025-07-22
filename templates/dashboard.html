@@ -30,6 +30,9 @@
 				<input type="submit" value="Tip Player" class="btn danger full-width">
 			</form>
 		{% endif %}
+		{% if timer_end %}
+			<p class="center"><strong>Game ends at:</strong> {{ timer_end }}</p>
+		{% endif %}
 	</div>
 </body>
 </html>
