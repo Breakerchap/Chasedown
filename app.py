@@ -90,21 +90,6 @@ def home():
 
     user = User.query.get(session['user_id'])
 
-    # Persistent hunter point drain
-    if user.role == 'hunter':
-        now = datetime.now(UTC)
-        last_loss = user.last_point_loss
-
-        # Make sure both datetimes are UTC-aware
-        if last_loss.tzinfo is None:
-            last_loss = last_loss.replace(tzinfo=timezone.utc)
-
-        minutes_passed = int((now - last_loss).total_seconds() // 60)
-        if minutes_passed > 0:
-            user.points = max(0, user.points - 2 * minutes_passed)
-            user.last_point_loss = now
-            db.session.commit()
-
     if user.role == 'admin':
         users = User.query.all()
         videos = TaskInstance.query.filter(TaskInstance.completed == True).all()
@@ -405,6 +390,20 @@ def toggle_lock():
         User.query.filter(User.role != 'admin').update({User.locked_until: future})
     elif action == 'unlock':
         User.query.filter(User.role != 'admin').update({User.locked_until: None})
+
+    db.session.commit()
+    return redirect(url_for('home'))
+
+@app.route('/drain_hunter_points', methods=['POST'])
+def drain_hunter_points():
+    user = User.query.get(session['user_id'])
+    if user.role != 'admin':
+        return "Access denied", 403
+
+    hunters = User.query.filter_by(role='hunter').all()
+    for hunter in hunters:
+        lost = hunter.points // 10
+        hunter.points -= lost
 
     db.session.commit()
     return redirect(url_for('home'))
