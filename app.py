@@ -215,24 +215,29 @@ def task_page():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    start_time = time.time()
-
-    file = request.files['video']
-    filename = secure_filename(file.filename)
+    import os
 
     user = User.query.get(session['user_id'])
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
 
-    if file and (time.time() - start_time <= 6):
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        task_instance.video_filename = filename
-    else:
-        task_instance.video_filename = None  # Or some placeholder text like 'timeout'
+    # Check if JS sent a forced timeout submission
+    if request.args.get("timeout") == "true":
+        task_instance.video_filename = None
+        task_instance.completed = True
+        user.points += Task.query.get(task_instance.task_id).points
+        db.session.commit()
+        return '', 204  # AJAX doesn't expect redirect
 
+    # Normal upload
+    file = request.files['video']
+    filename = secure_filename(file.filename)
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    task_instance.video_filename = filename
     task_instance.completed = True
-    base_points = Task.query.get(task_instance.task_id).points
-    user.points += base_points
+    user.points += Task.query.get(task_instance.task_id).points
     db.session.commit()
     return redirect(url_for('home'))
 

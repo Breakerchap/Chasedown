@@ -45,11 +45,48 @@
         <p id="status"></p>
 
         <div id="form-section">
-            <form method="POST" action="{{ url_for('submit') }}" enctype="multipart/form-data">
-                <label>Upload video proof:</label>
-                <input type="file" name="video" required>
-                <input type="submit" value="Submit Challenge" class="btn full-width">
-            </form>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <label>Upload video proof:</label>
+            <input type="file" name="video" required>
+            <input type="submit" value="Submit Challenge" class="btn full-width">
+        </form>
+
+        <script>
+        document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const formData = new FormData(form);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 second timeout
+
+            try {
+                const response = await fetch("{{ url_for('submit') }}", {
+                    method: "POST",
+                    body: formData,
+                    signal: controller.signal
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    location.reload(); // fallback
+                }
+            } catch (err) {
+                if (err.name === "AbortError") {
+                    // Timed out — complete task without file
+                    await fetch("{{ url_for('submit') }}?timeout=true", {
+                        method: "POST"
+                    });
+                    window.location.href = "{{ url_for('home') }}";
+                } else {
+                    alert("Upload failed. Please try again.");
+                }
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        });
+        </script>
 
             <form method="POST" action="{{ url_for('fail') }}" style="margin-top: 10px;">
                 {% if powerup %}
