@@ -16,39 +16,55 @@
             text-align: left;
         }
 
-        form {
-            margin-bottom: 5px;
-        }
-
         .btn {
             width: 100%;
             margin-top: 6px;
         }
-        input[type="number"] {
+
+        input[type="number"], select {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
+            padding: 10px;
+            margin: 6px 0;
             font-size: 16px;
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 6px;
         }
-        
+
+        form {
+            margin-bottom: 10px;
+        }
+
+        .user-card, .video-card {
+            display: none;
+        }
+
+        /* --- Mobile view --- */
         @media screen and (max-width: 768px) {
             table, thead, tbody, th, td, tr {
-                display: block;
+                display: none;
             }
-            tr {
-                margin-bottom: 1rem;
+
+            .user-card, .video-card {
+                display: block;
                 border: 1px solid #ccc;
                 border-radius: 8px;
-                padding: 10px;
+                padding: 12px;
+                margin-bottom: 20px;
+                background: #f9f9f9;
             }
-            th {
+
+            .card-header {
                 font-weight: bold;
-            }
-            td {
                 margin-bottom: 8px;
+            }
+
+            .card-row {
+                margin-bottom: 8px;
+            }
+
+            .btn {
+                font-size: 16px;
             }
         }
     </style>
@@ -69,13 +85,13 @@
                 <td>{{ user.password }}</td>
                 <td>
                     <form method="POST" action="{{ url_for('change_points', user_id=user.id) }}">
-                        <input type="number" name="points" value="{{ user.points }}" style="width: 100%;">
+                        <input type="number" name="points" value="{{ user.points }}">
                         <button type="submit" class="btn">Update</button>
                     </form>
                 </td>
                 <td>
                     <form method="POST" action="{{ url_for('change_role', user_id=user.id) }}">
-                        <select name="role" style="width: 100%;">
+                        <select name="role">
                             <option value="runner" {% if user.role == 'runner' %}selected{% endif %}>Runner</option>
                             <option value="hunter" {% if user.role == 'hunter' %}selected{% endif %}>Hunter</option>
                             <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
@@ -93,6 +109,32 @@
             </tbody>
         </table>
 
+        {% for user in users %}
+        <div class="user-card">
+            <div class="card-header">{{ user.username }}</div>
+            <div class="card-row">Password: {{ user.password }}</div>
+            <div class="card-row">
+                <form method="POST" action="{{ url_for('change_points', user_id=user.id) }}">
+                    <input type="number" name="points" value="{{ user.points }}">
+                    <button type="submit" class="btn">Update Points</button>
+                </form>
+            </div>
+            <div class="card-row">
+                <form method="POST" action="{{ url_for('change_role', user_id=user.id) }}">
+                    <select name="role">
+                        <option value="runner" {% if user.role == 'runner' %}selected{% endif %}>Runner</option>
+                        <option value="hunter" {% if user.role == 'hunter' %}selected{% endif %}>Hunter</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                    <button type="submit" class="btn">Change Role</button>
+                </form>
+            </div>
+            <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}">
+                <button type="submit" class="btn danger">Delete User</button>
+            </form>
+        </div>
+        {% endfor %}
+
         <h3>Submitted Videos</h3>
         <table>
             <thead>
@@ -105,12 +147,11 @@
                 <td>{{ entry.task.name }}</td>
                 <td>{{ entry.task.points }}</td>
                 <td>
-                {% if entry.video_filename %}
-                    <a href="{{ url_for('uploaded_file', filename=entry.video_filename) }}" class="btn">Download Video</a>
-                {% else %}
-                    <span style="color: grey;">(No video)</span>
-                {% endif %}
-
+                    {% if entry.video_filename %}
+                        <a href="{{ url_for('uploaded_file', filename=entry.video_filename) }}" class="btn">Download Video</a>
+                    {% else %}
+                        <span style="color: grey;">(No video)</span>
+                    {% endif %}
                 </td>
                 <td>
                     <form method="POST" action="{{ url_for('delete_video', instance_id=entry.id) }}">
@@ -121,14 +162,35 @@
             {% endfor %}
             </tbody>
         </table>
+
+        {% for entry in videos %}
+        <div class="video-card">
+            <div class="card-header">{{ entry.user.username }} – {{ entry.task.name }}</div>
+            <div class="card-row">Points: {{ entry.task.points }}</div>
+            <div class="card-row">
+                {% if entry.video_filename %}
+                    <a href="{{ url_for('uploaded_file', filename=entry.video_filename) }}" class="btn">Download Video</a>
+                {% else %}
+                    <span style="color: grey;">(No video)</span>
+                {% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('delete_video', instance_id=entry.id) }}">
+                <button type="submit" class="btn danger">Delete</button>
+            </form>
+        </div>
+        {% endfor %}
+
         <a href="{{ url_for('map_page') }}" class="btn full-width">View Map</a>
         <a href="{{ url_for('leaderboard') }}" class="btn full-width">View Leaderboard</a>
-    <h3>Lock/Unlock All Players</h3>
+
+        <h3>Lock/Unlock All Players</h3>
         <form method="POST" action="{{ url_for('toggle_lock') }}">
             <button type="submit" name="action" value="lock" class="btn danger full-width">Lock All Players</button>
             <button type="submit" name="action" value="unlock" class="btn full-width">Unlock All Players</button>
         </form>
+
         <hr>
+
         <form method="POST" action="{{ url_for('drain_hunter_points') }}" onsubmit="return confirm('Are you sure you want to drain 10% of all hunters\' points?');">
             <button type="submit" class="btn danger full-width">Drain 10% from Hunters</button>
         </form>
