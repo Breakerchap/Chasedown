@@ -9,44 +9,58 @@
             background-color: #f9f9f9;
             border: 1px solid #ccc;
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
         }
 
         .task-option h3 {
-            margin-top: 0;
-            font-size: 20px;
+            font-size: 18px;
+            margin: 0 0 8px 0;
         }
 
-        .btn {
-            width: 100%;
-            margin-top: 10px;
-            font-size: 16px;
-            text-align: center;
+        .task-option p {
+            margin: 0 0 12px 0;
+        }
+
+        .spaced {
+            margin-top: 16px;
+        }
+
+        .btn[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Choose Your Challenge</h2>
+        <div class="role">Points: {{ user.points }}</div>
 
         {% for task in tasks %}
         <div class="task-option">
             <h3>{{ task.name }} (
-            {% if powerup %}
-                <span style="text-decoration: line-through; color: grey;">{{ task.points }}</span>
-                <span style="color: green; font-weight: bold;">{{ task.points * 2 }}</span>
-            {% else %}
-                {{ task.points }}
-            {% endif %} pts)</h3>
+                {% if powerup %}
+                    <span style="text-decoration: line-through; color: grey;">{{ task.points }}</span>
+                    <span style="color: green; font-weight: bold;">{{ task.points * 2 }}</span>
+                {% else %}
+                    {{ task.points }}
+                {% endif %}
+            pts)</h3>
             <p>{{ task.description }}</p>
             <a href="{{ url_for('choose_task', task_id=task.id) }}" class="btn">Choose This</a>
         </div>
         {% endfor %}
+
+        {% if user.points >= 5 %}
         <form action="{{ url_for('reroll_tasks') }}" method="post">
-            <button class="btn" type="submit" onclick="return confirm('Rerolling will cost 5 points. Proceed?')">Reroll Tasks (−5 pts)</button>
+            <button class="btn danger" type="submit" onclick="return confirm('Rerolling will cost 5 points. Proceed?')">Reroll Tasks (−5 pts)</button>
         </form>
-        <a href="{{ url_for('home') }}" class="btn">Back to Dashboard</a>
+        {% else %}
+        <button class="btn danger" disabled>Not enough points to reroll</button>
+        {% endif %}
+
+        <a href="{{ url_for('home') }}" class="btn spaced">Back to Dashboard</a>
     </div>
 </body>
 </html>

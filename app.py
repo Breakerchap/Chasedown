@@ -168,7 +168,7 @@ def tasks():
         options = random.sample(all_tasks, 2)
         session['task_choices'] = [t.id for t in options]
 
-    return render_template('task_choice.html', tasks=options)
+    return render_template('task_choice.html', tasks=options, user=user)
 
 @app.route('/reroll_tasks', methods=['POST'])
 def reroll_tasks():
