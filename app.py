@@ -170,6 +170,25 @@ def tasks():
 
     return render_template('task_choice.html', tasks=options)
 
+@app.route('/reroll_tasks', methods=['POST'])
+def reroll_tasks():
+    user = User.query.get(session['user_id'])
+
+    if user.points < 5:
+        return "Not enough points to reroll.", 400
+
+    all_tasks = Task.query.all()
+    if len(all_tasks) < 2:
+        return "Not enough tasks in the database."
+
+    # Deduct points and reroll
+    user.points -= 5
+    db.session.commit()
+
+    new_choices = random.sample(all_tasks, 2)
+    session['task_choices'] = [t.id for t in new_choices]
+    return redirect(url_for('tasks'))
+
 @app.route('/choose_task/<int:task_id>')
 def choose_task(task_id):
     user = User.query.get(session['user_id'])

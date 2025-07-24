@@ -43,6 +43,9 @@
             <a href="{{ url_for('choose_task', task_id=task.id) }}" class="btn">Choose This</a>
         </div>
         {% endfor %}
+        <form action="{{ url_for('reroll_tasks') }}" method="post">
+            <button class="btn" type="submit" onclick="return confirm('Rerolling will cost 5 points. Proceed?')">Reroll Tasks (−5 pts)</button>
+        </form>
         <a href="{{ url_for('home') }}" class="btn">Back to Dashboard</a>
     </div>
 </body>
