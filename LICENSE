@@ -14,13 +14,26 @@ You are granted permission to use, copy, modify, and distribute this project and
 
 - You clearly and prominently credit **Remy Ellis** as the original creator.
 - The credit appears:
-  - In the website footer or about section
-  - In-game (e.g. splash screen, credits, or settings)
+  - In the website footer or about section  
+  - In-game (e.g. splash screen, credits, or settings)  
   - In any documentation, app listings, or public promotional material
 
 ---
 
-2. COPYRIGHT AND IP OWNERSHIP
+2. DISTRIBUTION OF MODIFIED VERSIONS
+
+You may distribute modified or derivative versions of Chasedown, but you must:
+- Clearly state that your version is a fork or modification.
+- Not present it as the official version or mislead others about its origin.
+- Still comply with all other licence terms, including attribution and royalty clauses.
+
+You **may use the name "Chasedown" or variations thereof** (e.g. CHASEDOWN, ChaseDown) in your project or derivative, as long as:
+- Proper credit is given to **Remy Ellis** as the original creator
+- You do not mislead users into thinking your version is official or endorsed by the original creator
+
+---
+
+3. COPYRIGHT AND IP OWNERSHIP
 
 All aspects of Chasedown — including but not limited to the gameplay mechanics, source code, rules, design, name, and any original content — remain the **intellectual property of Remy Ellis**.
 
@@ -29,22 +42,11 @@ All rights reserved.
 
 ---
 
-3. ROYALTIES ON PROFIT
+4. ROYALTIES ON PROFIT
 
 Any profit made from Chasedown or any derivative (via ads, in-game purchases, sales, subscriptions, or other commercial channels) must pay royalties to **Remy Ellis**.
 
-- Unless otherwise agreed in writing, you owe a **5% royalty on gross revenue**, payable quarterly.
-
----
-
-4. PROHIBITION ON CLAIMING OWNERSHIP
-
-You may **not**:
-- Register a trademark, copyright, or patent on Chasedown or any of its parts or forks.
-- Use the name “Chasedown” or any variation to suggest unauthorised ownership or origin.
-- Misrepresent this project as being created or maintained by anyone other than **Remy Ellis**.
-
-The name **“Chasedown”** and all stylistic variants are **reserved** and may not be trademarked, registered, or used deceptively.
+- Unless otherwise agreed in writing, you owe a **10% royalty on gross revenue**, payable quarterly.
 
 ---
 
@@ -56,17 +58,23 @@ This software and game are provided **“as is”**, without any warranty of any
 
 ---
 
-6. JURISDICTION
+6. TERMINATION
+
+Failure to comply with any part of this licence may result in **immediate and automatic termination** of the rights granted herein.  
+Any continued use or distribution after termination is a violation of copyright law.
+
+---
+
+7. JURISDICTION
 
 This licence is governed by the laws of **New South Wales, Australia**, and any legal disputes shall be resolved exclusively within the courts of NSW.
 
 ---
 
-7. SEVERABILITY
+8. SEVERABILITY
 
 If any clause in this licence is found invalid or unenforceable, the remaining terms will remain in full effect.
 
 ---
 
 By using, modifying, or distributing Chasedown, you acknowledge and agree to all of the above terms.
-
