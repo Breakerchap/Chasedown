@@ -23,10 +23,10 @@
     </div>
 
     <!-- Server-side data -->
-    <script>
-        const showAll = {{ 'true' if show_all else 'false' }};
-        const others = {{ others | tojson }};
-    </script>
+        <script>
+            const showAll = {{ show_all | tojson }};
+            const others = {{ others | tojson }};
+        </script>
 
     <!-- Leaflet and Compass -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

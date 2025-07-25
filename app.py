@@ -274,6 +274,7 @@ def fail():
 @app.route('/map')
 def map_page():
     user = User.query.get(session['user_id'])
+    show_all = user.role in ('hunter', 'admin')
 
     coordinates = []
 
@@ -284,8 +285,7 @@ def map_page():
         if not player or player.username == 'admin':
             continue  # Never show admin
 
-        if user.role in ('hunter', 'admin'):
-            # Show all players except admin
+        if show_all or player.id == user.id:
             coordinates.append({
                 'username': player.username,
                 'lat': c.lat,
@@ -293,17 +293,8 @@ def map_page():
                 'role': player.role,
                 'is_self': player.id == user.id
             })
-        elif player.id == user.id:
-            # Runners see only themselves
-            coordinates.append({
-                'username': player.username,
-                'lat': c.lat,
-                'lon': c.lon,
-                'role': player.role,
-                'is_self': True
-            })
 
-    return render_template('map.html', others=coordinates)
+    return render_template('map.html', others=coordinates, show_all=show_all)
 
 @app.route('/leaderboard')
 def leaderboard():
@@ -323,14 +314,6 @@ def leaderboard():
         })
 
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
-
-@app.route('/gps_map')
-def gps_map():
-    user = User.query.get(session['user_id'])
-
-    # Get all users + last known coordinates
-    coordinates = UserCoordinates.query.all()
-    return render_template('gps_map.html', coordinates=coordinates)
 
 @app.route('/update_location', methods=['POST'])
 def update_location():
