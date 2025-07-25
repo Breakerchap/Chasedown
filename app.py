@@ -79,6 +79,26 @@ class UserCoordinates(db.Model):
     lat = db.Column(db.Float)
     lon = db.Column(db.Float)
 
+def check_lock(user):
+    if user.role == 'admin' or not user.locked_until:
+        return None
+
+    locked_time = user.locked_until
+    if locked_time.tzinfo is None:
+        locked_time = locked_time.replace(tzinfo=timezone.utc)
+
+    now = datetime.now(UTC)
+    if now < locked_time:
+        seconds_left = int((locked_time - now).total_seconds())
+        if seconds_left > 3600:
+            return render_template('locked.html', user=user)
+        else:
+            return render_template('tipped_cooldown.html', seconds_left=seconds_left, user=user)
+    else:
+        user.locked_until = None
+        db.session.commit()
+        return None
+
 # --- Routes ---
 @app.route('/')
 def start():
@@ -90,6 +110,9 @@ def home():
         return redirect(url_for('login'))
 
     user = User.query.get(session['user_id'])
+    lock_redirect = check_lock(user)
+    if lock_redirect:
+        return lock_redirect
 
     if user.role == 'admin':
         users = User.query.all()
@@ -104,8 +127,12 @@ def home():
 
         now = datetime.now(UTC)
         if now < locked_time:
+            # Check if this is an admin lock (longer than 1 hour)
             seconds_left = int((locked_time - now).total_seconds())
-            return render_template('tipped_cooldown.html', seconds_left=seconds_left, user=user)
+            if seconds_left > 3600:
+                return render_template('locked.html', user=user)
+            else:
+                return render_template('tipped_cooldown.html', seconds_left=seconds_left, user=user)
         else:
             user.locked_until = None
             db.session.commit()
@@ -148,6 +175,9 @@ def register():
 @app.route('/tasks')
 def tasks():
     user = User.query.get(session['user_id'])
+    lock_redirect = check_lock(user)
+    if lock_redirect:
+        return lock_redirect
 
     if user.role == 'hunter':
         return render_template('hunter_blocked.html', user=user)
@@ -214,6 +244,11 @@ def choose_task(task_id):
 @app.route('/task')
 def task_page():
     user = User.query.get(session['user_id'])
+
+    lock_redirect = check_lock(user)
+    if lock_redirect:
+        return lock_redirect
+
     task_instance = TaskInstance.query.filter_by(user_id=user.id, completed=False).first()
     if user.role == 'hunter':
         return render_template('hunter_blocked.html', user=user)
@@ -274,6 +309,11 @@ def fail():
 @app.route('/map')
 def map_page():
     user = User.query.get(session['user_id'])
+
+    lock_redirect = check_lock(user)
+    if lock_redirect:
+        return lock_redirect
+
     show_all = user.role in ('hunter', 'admin')
 
     coordinates = []
@@ -298,6 +338,12 @@ def map_page():
 
 @app.route('/leaderboard')
 def leaderboard():
+    user = User.query.get(session['user_id'])
+
+    lock_redirect = check_lock(user)
+    if lock_redirect:
+        return lock_redirect
+
     users = User.query.filter(User.username != 'admin').order_by(User.points.desc()).all()
     leaderboard_data = []
 
