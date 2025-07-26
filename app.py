@@ -192,11 +192,21 @@ def tasks():
         task_ids = session['task_choices']
         options = Task.query.filter(Task.id.in_(task_ids)).all()
     else:
-        all_tasks = Task.query.all()
+        recent = session.get('recent_tasks', [])
+        all_tasks = Task.query.filter(~Task.id.in_(recent)).all()
+
         if len(all_tasks) < 2:
-            return "Not enough tasks in the database. Please run init_db.py."
+            all_tasks = Task.query.all()
+            recent = []
+
         options = random.sample(all_tasks, 2)
         session['task_choices'] = [t.id for t in options]
+
+        # Update recent task list
+        recent.extend(t.id for t in options)
+        if len(recent) > 10:
+            recent = recent[-10:]
+        session['recent_tasks'] = recent
 
     return render_template('task_choice.html', tasks=options, user=user)
 
@@ -207,16 +217,28 @@ def reroll_tasks():
     if user.points < 5:
         return "Not enough points to reroll.", 400
 
-    all_tasks = Task.query.all()
-    if len(all_tasks) < 2:
-        return "Not enough tasks in the database."
-
-    # Deduct points and reroll
+    # Deduct points
     user.points -= 5
     db.session.commit()
 
+    # Get all tasks and avoid recent ones
+    recent = session.get('recent_tasks', [])
+    all_tasks = Task.query.filter(~Task.id.in_(recent)).all()
+
+    # If avoiding recent ones leaves too few, fallback to full pool
+    if len(all_tasks) < 2:
+        all_tasks = Task.query.all()
+        recent = []
+
     new_choices = random.sample(all_tasks, 2)
     session['task_choices'] = [t.id for t in new_choices]
+
+    # Update recent task list
+    recent.extend(t.id for t in new_choices)
+    if len(recent) > 10:
+        recent = recent[-10:]  # Keep only last 10
+    session['recent_tasks'] = recent
+
     return redirect(url_for('tasks'))
 
 @app.route('/choose_task/<int:task_id>')
